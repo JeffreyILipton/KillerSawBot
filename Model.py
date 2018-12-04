@@ -93,32 +93,6 @@ def TrajToUko(Xks,ro,dt,):
     return new_xks,Ukos
 
 
-def TVLQR(xtraj, utraj, dt, r0, Q, R):
-    '''Q should be diag([1/distance deviation ^2, 1/speed deviation ^2])
-       R should be 1/ control deviation^2
-    '''
-    Ktraj = []
-    ia = np.mat(np.eye(3))
-
-    Ak = A(dt)
-    S = np.matrix(Q)
-    Q = np.matrix(Q)
-    R = np.matrix(R)
-    G,V = MotorGainAndOffset()
-    #GI = np.linalg.inv(G)
-
-    for k in range(len(xtraj)-1,-1,-1):
-        Bk = B(xtraj[k][0],r0).dot(G)
-        K = -(R + Bk.T*S*Bk).I*Bk.T*S #-(R + Bk.T*S*Bk).I*Bk.T*S
-        S = Q + K.T*R*K + (np.matrix(np.identity(3)) + Bk*K).T*S*(np.matrix(np.identity(3)) + Bk*K)
-        Ktraj.append(K)
-
-    Ktraj_output=[]
-    for K in reversed(Ktraj):
-        Ktraj_output.append(K)
-    return Ktraj_output
-
-
 def B(th,r0):
     '''returns the B matrix
        this expects a 1d array for X
@@ -137,6 +111,28 @@ def A(dt):
     #Za = np.mat(np.zeros((3,3)))
     #A = np.bmat([[Ia,Dt],[Za,Za]])
     return Ia
+
+
+def dBdtheta(th):
+    B = np.matrix([[-0.5*sin(th), -0.5*sin(th)],
+                   [ 0.5*cos(th),  0.5*cos(th)],
+                   [ 0,            0]])
+    return B
+
+
+def diffXs(Xbar,Xtraj):
+    DX = (Xbar.reshape((Xbar.size,1))-Xtraj)
+    for i in range(4,Xbar.size,5):
+        DX[i] = minAngleDif(Xbar[i],Xtraj[i])
+    return DX
+
+def makeSuperQ(Q,T):
+    diag=[]
+    for i in range(0,T):
+            diag.append(np.zeros((2,2)))
+            diag.append(Q)
+    qbar = scipy.sparse.block_diag(diag).todense()
+    return qbar
 
 
 

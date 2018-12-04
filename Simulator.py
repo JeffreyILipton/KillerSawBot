@@ -8,6 +8,24 @@ import sys
 
 from plotRun import *
 
+class TickTock():
+    def __init__(self):
+        self.SimI=0
+        self.ConI=0
+        self.lock = Lock()
+    def setSimI(self,I):
+        #self.lock.acquire()
+        self.SimI = I
+        #self.lock.release()
+    def setConI(self,I):
+        #self.lock.acquire()
+        self.ConI = I
+        #self.lock.release()
+	#print "set: ",state
+    def simTick(self):
+        return self.ConI>=self.SimI
+    def conTick(self):
+        return self.ConI<=self.SimI
 
 class CreateSimulator(Thread):
     def __init__(self,CRC_sim,stateholder,XKs,ro,dt,Q,speedup = 10,timelock=None,NoNoise=False):

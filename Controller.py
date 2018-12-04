@@ -1,7 +1,8 @@
 ﻿from threading import Thread, Lock
-from CreateStateEstimator import *
+from StateEstimator import *
 from CreateInterface import *
-from CreateModel import *
+from Model import *
+from Trajectory import *
 from TrajectoryTests import *
 import scipy
 from scipy.optimize import minimize
@@ -11,46 +12,6 @@ import csv
 
 from math import fabs
 from plotRun import *
-
-class TickTock():
-    def __init__(self):
-        self.SimI=0
-        self.ConI=0
-        self.lock = Lock()
-    def setSimI(self,I):
-        #self.lock.acquire()
-        self.SimI = I
-        #self.lock.release()
-    def setConI(self,I):
-        #self.lock.acquire()
-        self.ConI = I
-        #self.lock.release()
-	#print "set: ",state
-    def simTick(self):
-        return self.ConI>=self.SimI
-    def conTick(self):
-        return self.ConI<=self.SimI
-
-def dBdtheta(th):
-    B = np.matrix([[-0.5*sin(th), -0.5*sin(th)],
-                   [ 0.5*cos(th),  0.5*cos(th)],
-                   [ 0,            0]])
-    return B
-
-
-def diffXs(Xbar,Xtraj):
-    DX = (Xbar.reshape((Xbar.size,1))-Xtraj)
-    for i in range(4,Xbar.size,5):
-        DX[i] = minAngleDif(Xbar[i],Xtraj[i])
-    return DX
-
-def makeSuperQ(Q,T):
-    diag=[]
-    for i in range(0,T):
-            diag.append(np.zeros((2,2)))
-            diag.append(Q)
-    qbar = scipy.sparse.block_diag(diag).todense()
-    return qbar
 
 def obj(Xbar,Xtraj,Qbar):
         DX = diffXs(Xbar,Xtraj)
@@ -151,6 +112,8 @@ def xGuess(Xguess,Xstar,ro,dt,T):
     return Xguess
 
 
+
+
 class CreateController(Thread):
     def __init__(self,CRC,stateholder,Xks,Uks,ro,dt,Q,R,T,maxU=100,speedup = 1,ticktoc = None, NoControl=False):
         Thread.__init__(self)
@@ -182,30 +145,13 @@ class CreateController(Thread):
 
 
         
-    def transform(self,X):
-        
-        th = -self.offset[2,0]
-        Rv = np.matrix([[cos(th), -sin(th) ,0],
-                       [sin(th), cos(th)  ,0],
-                       [0,0,1]])
 
-        th = self.Xks[0][2]
-        Rp = np.matrix([[cos(th), -sin(th) ,0],
-                       [sin(th), cos(th)  ,0],
-                       [0,0,1]]) 
-
-
-        return Rp.dot(Rv.dot(X-self.offset))+(np.matrix(self.Xks[0][0:3]).transpose())
 
     def run(self):
         Qbar = makeSuperQ(self.Q,self.T)
         waittime = 0 # self.dt/self.speedup
         Xguess = xtrajMaker(self.Xks,self.Uos,self.T,self.index)
-        while True and self.index<( len(self.Uos)-2):
-
-            
-
-            T = min( (len(self.Uos) - self.index-1), self.T)
+        while self.index<( len(self.Uos)-2):
 
             tic = time.time()
 
@@ -213,31 +159,28 @@ class CreateController(Thread):
             X_m = self.holder.GetConfig()
             t = self.holder.getTime()
 
-            #print "state %0.3f,%0.3f,%0.3f"%(s[0],s[1],s[2]) 
-            #X = np.matrix([s[0],s[1],s[2]])
             index = self.index
-            if(self.index ==0):
-                # for first time step set offset and start movement
-                self.offset = X_m
-                print 'offset:',  self.offset
 
 
-            X_m = self.transform(X_m)
+            # This is where the control happens 
+            T = min( (len(self.Uos) - self.index-1), self.T)
+
             Xtraj = xtrajMaker(self.Xks,self.Uos,T,index)
-            if (T!= self.T): Qbar = makeSuperQ(self.Q,T)            
+            if self.index !=0:
+                Xguess = xGuess(Xguess,XStar.x,self.ro,self.dt,T)
 
+
+
+
+            if (T!= self.T): Qbar = makeSuperQ(self.Q,T)            
             constrains = ({'type':'eq',
                'fun':lambda x: dynamicConstraint(x,X_m,self.dt,self.ro,T),
                'jac': lambda x: dynamicJacobian(x,X_m,self.dt,self.ro,T)})
-            
 
-            if self.index !=0:
-                Xguess = xGuess(Xguess,XStar.x,self.ro,self.dt,T)
-            
-
-            #Xguess
+            #Set the objective function and its jacobian
             targetobj = lambda x: obj(x,Xtraj,Qbar)
             targetjac = lambda x: jacobian(x,Xtraj,Qbar)
+
             XStar = minimize(targetobj,np.squeeze(np.asarray(Xguess)),method='SLSQP',
                                 options = {'maxiter':10},
                                 #bounds = self.bounds,
@@ -245,16 +188,11 @@ class CreateController(Thread):
                                 jac = targetjac)
             U = XStar.x[0:2]
 
+
             
 
-            #look out for theta wrap around
-
-                
-            Xk = np.matrix(self.Xks[index]).transpose()
-            DX = X_m- Xk
-            DX[2,0] = minAngleDif(X_m[2,0],self.Xks[index][2])
+            # Threshold difference between  expected and actual
             Uc = np.squeeze(np.array(self.Uos[self.index]).transpose())
-
             Udif = U-Uc
             for i in range(0,2):
                 if fabs(Udif[i])>self.maxU:
@@ -279,7 +217,15 @@ class CreateController(Thread):
             if step:
                 self.CRC.directDrive(U[0],U[1])
 
+
+                
+
                 # add to log
+                Xk = np.matrix(self.Xks[index]).transpose()
+                DX = X_m- Xk
+                #look out for theta wrap around                
+                DX[2,0] = minAngleDif(X_m[2,0],self.Xks[index][2])
+                
                 row = [t]+[Xk[0,0], Xk[1,0],  Xk[2,0] ]+[X_m[0,0], X_m[1,0],  X_m[2,0] ]+[DX[2,0]]+[U[0],U[1]]+[Uc[0],Uc[1]]
                 print "I:",self.index
 
@@ -325,6 +271,7 @@ def main():
     Xks = circle(r_circle,dt,speed)#loadTraj('../Media/card4-dist5.20-rcut130.00-trajs-0.npy')
     Xks,Uks = TrajToUko(Xks,r_wheel,dt)
 
+
     maxU = 15.0
 
 
@@ -337,12 +284,21 @@ def main():
     VI = ViconInterface(channel,sh)
     T = 5
     CRC = CreateRobotCmd('/dev/ttyUSB0',Create_OpMode.Full,Create_DriveMode.Direct)
-    CC = CreateController(CRC,sh,Xks,Uks,r_wheel,dt,Q,R,T,maxU,NoControl=False)
+    
 
 
     
     VI.start()
     time.sleep(0.05)
+
+    Xinitial = sh.GetConfig()
+    print 'X_initial:',  Xinitial
+    
+    # transform to start at robot current position. 
+    Xtraj0 = Xks[0]
+    Xks = [transformToViconFrame(Xinitial,Xtraj0,Xtraj) for Xtraj in Xks]
+
+    CC = CreateController(CRC,sh,Xks,Uks,r_wheel,dt,Q,R,T,maxU,NoControl=False)
     CC.start()
 
     CC.join()
