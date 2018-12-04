@@ -1,17 +1,17 @@
-﻿from threading import Thread, Lock
+﻿from threading import Thread, Lock, Event
 from StateEstimator import *
 from CreateInterface import *
 from Model import *
-from Trajectory import *
-from TrajectoryTests import *
+from Simulator import TickTock
+
 import scipy
 from scipy.optimize import minimize
 import sys
 
-import csv
+#import csv
 
 from math import fabs
-from plotRun import *
+
 
 def obj(Xbar,Xtraj,Qbar):
         DX = diffXs(Xbar,Xtraj)
@@ -112,10 +112,33 @@ def xGuess(Xguess,Xstar,ro,dt,T):
     return Xguess
 
 
+def MPC(dt,ro,T,Xtraj,Qbar,Xguess,X_m):
+    constrains = ({'type':'eq',
+        'fun':lambda x: dynamicConstraint(x,X_m,dt,ro,T),
+        'jac': lambda x: dynamicJacobian(x,X_m,dt,ro,T)})
 
+    #Set the objective function and its jacobian
+    targetobj = lambda x: obj(x,Xtraj,Qbar)
+    targetjac = lambda x: jacobian(x,Xtraj,Qbar)
+
+    XStar = minimize(targetobj,np.squeeze(np.asarray(Xguess)),method='SLSQP',
+                        options = {'maxiter':10},
+                        #bounds = self.bounds,
+                        constraints = constrains,#)#,
+                        jac = targetjac)
+    U = XStar.x[0:2]
+    return U,XStar.x
+
+def thresholdU(U,Uc,maxU):
+    Udif = U-Uc
+    U_clean = np.array(U)
+    for i in range(0,2):
+        if fabs(Udif[i])>maxU:
+            U_clean[i] = maxU*Udif[i]/fabs(Udif[i])+Uc[i]
+    return U_clean
 
 class CreateController(Thread):
-    def __init__(self,CRC,stateholder,Xks,Uks,ro,dt,Q,R,T,maxU=100,speedup = 1,ticktoc = None, NoControl=False):
+    def __init__(self,stopper,CRC,stateholder,Xks,Uks,ro,dt,Q,R,T,maxU=100,queue=None,speedup = 1,ticktoc = None, NoControl=False):
         Thread.__init__(self)
         self.nocontrol = NoControl
         self.speedup = speedup
@@ -126,21 +149,23 @@ class CreateController(Thread):
         self.T  =T
         self.Q = Q
         self.ro = ro
-        self.CRC.start()
+        self.stopper = stopper
         
-        self.offset = np.matrix([0,0,0]).transpose()
+      
         
         self.Uos = Uks
         self.Xks = Xks
-        #self.Ks = TVLQR(self.Xks, self.Uos, dt, ro, Q, R)
         self.maxU = maxU
         self.index = 0
-        self.csvFile = open("Run.csv",'wb')
-        self.writer = csv.writer(self.csvFile)
+        
+        #self.csvFile = open("Run.csv",'wb')
+        #self.writer = csv.writer(self.csvFile)
 
         row=['Time','X_target','Y_target','Angle_target','X_actual','Y_actual','Angle_actual','DX angle','U[0]','U[1]','Uc[0]','Uc[1]']
-        self.writer.writerow(row)
-
+        if type(queue)!=type(None):
+            queue.put(row)
+        #self.writer.writerow(row)
+        self.CRC.start()
 
 
 
@@ -148,10 +173,9 @@ class CreateController(Thread):
 
 
     def run(self):
+        waittime = 0 
         Qbar = makeSuperQ(self.Q,self.T)
-        waittime = 0 # self.dt/self.speedup
-        Xguess = xtrajMaker(self.Xks,self.Uos,self.T,self.index)
-        while self.index<( len(self.Uos)-2):
+        while (self.index<( len(self.Uos)-2)) and (not self.stopper.is_set()) :
 
             tic = time.time()
 
@@ -159,54 +183,41 @@ class CreateController(Thread):
             X_m = self.holder.GetConfig()
             t = self.holder.getTime()
 
-            index = self.index
-
+ 
+            Uc = np.squeeze(np.array(self.Uos[self.index]).transpose())
 
             # This is where the control happens 
-            T = min( (len(self.Uos) - self.index-1), self.T)
+            if not self.nocontrol:
+                #Set the Horizon
+                T = min( (len(self.Uos) - self.index-1), self.T)
 
-            Xtraj = xtrajMaker(self.Xks,self.Uos,T,index)
-            if self.index !=0:
-                Xguess = xGuess(Xguess,XStar.x,self.ro,self.dt,T)
+                if self.index ==0:
+                    Xguess = xtrajMaker(self.Xks,self.Uos,self.T,self.index)
+                else:
+                    Xguess = xGuess(Xguess,XStar,self.ro,self.dt,T)
 
-
-
-
-            if (T!= self.T): Qbar = makeSuperQ(self.Q,T)            
-            constrains = ({'type':'eq',
-               'fun':lambda x: dynamicConstraint(x,X_m,self.dt,self.ro,T),
-               'jac': lambda x: dynamicJacobian(x,X_m,self.dt,self.ro,T)})
-
-            #Set the objective function and its jacobian
-            targetobj = lambda x: obj(x,Xtraj,Qbar)
-            targetjac = lambda x: jacobian(x,Xtraj,Qbar)
-
-            XStar = minimize(targetobj,np.squeeze(np.asarray(Xguess)),method='SLSQP',
-                                options = {'maxiter':10},
-                                #bounds = self.bounds,
-                                constraints = constrains,#)#,
-                                jac = targetjac)
-            U = XStar.x[0:2]
-
-
+                if (T!= self.T): Qbar = makeSuperQ(self.Q,T)            
             
+                Xtraj = xtrajMaker(self.Xks,self.Uos,T,self.index)
 
+                # Run MPC
+                U_init, XStar = MPC(self.dt,self.ro,T,Xtraj,Qbar,Xguess,X_m)
+                # Threshold results
+                U = thresholdU(U_init,Uc,self.maxU)
+            else:        
+                U=Uc
             # Threshold difference between  expected and actual
-            Uc = np.squeeze(np.array(self.Uos[self.index]).transpose())
-            Udif = U-Uc
-            for i in range(0,2):
-                if fabs(Udif[i])>self.maxU:
-                    U[i] = self.maxU*Udif[i]/fabs(Udif[i])+Uc[i]
 
 
-            if self.nocontrol: U=Uc
 
+            # blocking if using simulator
             step = False
             if self.ticktock == None: step=True
             elif self.ticktock.conTick(): 
                 step = True
                 self.ticktock.setConI(self.index+1)
 
+            # wait for time needed
             toc = time.time()
             time_taken = toc-tic
             print time_taken
@@ -217,30 +228,33 @@ class CreateController(Thread):
             if step:
                 self.CRC.directDrive(U[0],U[1])
 
-
+            if type(queue)!=type(None):
                 
-
                 # add to log
-                Xk = np.matrix(self.Xks[index]).transpose()
+                Xk = np.matrix(self.Xks[self.index]).transpose()
                 DX = X_m- Xk
                 #look out for theta wrap around                
-                DX[2,0] = minAngleDif(X_m[2,0],self.Xks[index][2])
+                DX[2,0] = minAngleDif(X_m[2,0],self.Xks[self.index][2])
                 
                 row = [t]+[Xk[0,0], Xk[1,0],  Xk[2,0] ]+[X_m[0,0], X_m[1,0],  X_m[2,0] ]+[DX[2,0]]+[U[0],U[1]]+[Uc[0],Uc[1]]
-                print "I:",self.index
+                queue.put(row)
 
-                self.writer.writerow(row)
-
-                self.index +=1
+            print "I:",self.index
+            self.index +=1
+               
+                
             
             
             
-
-        self.CRC.stop()
-        self.csvFile.close()
-        print "closed"
+        print "Control Done"
 
 def main():
+    from plotRun import *
+    from Logging import *
+    from TrajectoryTests import *
+    from Trajectory import *
+
+
     channel = 'VICON_sawbot'
     r_wheel = 125#mm
     dt = 1.0/5.0
@@ -281,7 +295,8 @@ def main():
 
     sh = StateHolder(lock,np.matrix([0,0,0]).transpose())
 
-    VI = ViconInterface(channel,sh)
+    VI_stopper = Event() # https://christopherdavis.me/blog/threading-basics.html
+    VI = ViconInterface(VI_stopper,channel,sh)
     T = 5
     CRC = CreateRobotCmd('/dev/ttyUSB0',Create_OpMode.Full,Create_DriveMode.Direct)
     
@@ -298,11 +313,20 @@ def main():
     Xtraj0 = Xks[0]
     Xks = [transformToViconFrame(Xinitial,Xtraj0,Xtraj) for Xtraj in Xks]
 
-    CC = CreateController(CRC,sh,Xks,Uks,r_wheel,dt,Q,R,T,maxU,NoControl=False)
+    CC_stopper = Event()
+    LogQ = Queue(0)
+    CC = CreateController(CC_stopper,CRC,sh,Xks,Uks,r_wheel,dt,Q,R,T,maxU,LogQ,NoControl=False)
+    Log_stopper = Event()
+    Log = Logger("Run1",Log_stopper,LogQ)
     CC.start()
 
+    Log.start()
     CC.join()
-    #VI.join()
+    Log_stopper.set()
+    Log.join()
+    VI_stopper.set()
+
+    VI.join()
 
     print "Done"
     plotCSVRun()

@@ -1,6 +1,6 @@
 ﻿from vicon import body_t
 from math import *
-from threading import Thread, Lock
+from threading import Thread, Lock, Event
 import time
 import numpy as np
 import os
@@ -41,7 +41,8 @@ def vicon_handler(holder,channel,data):
     holder.setState(state,t) # [mm,mm,rad], ms since epoch]
 
 class ViconInterface(Thread):
-    def __init__(self,channel,state_holder):
+    def __init__(self,stopper,channel,state_holder):
+        self.stopper = stopper
         self.channel = channel
         Thread.__init__(self)
         self.lc = lcm.LCM()
@@ -49,7 +50,7 @@ class ViconInterface(Thread):
         self.subscription = self.lc.subscribe(channel,handler)
 
     def run(self):
-        while True:
+        while not self.stopper.is_set():
             self.lc.handle()
 
 
@@ -91,17 +92,20 @@ def main():
     lock = Lock()
 
     sh = StateHolder(lock,[0,0,0])
+    stopper = Event()
 
-    VI = ViconInterface(channel,sh)
+    VI = ViconInterface(stopperchannel,sh)
     #VT1 = ViconTester(sh,10)
     VT2 = ViconTester(sh,1)
     VI.start()
     #VT1.start()
     VT2.start()
 
-    VI.join()
+    
     #VT1.join()
     VT2.join()
+    stopper.set()
+    VI.join()
     print "Exiting Main Thread"
 
 
