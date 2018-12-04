@@ -137,7 +137,7 @@ def thresholdU(U,Uc,maxU):
             U_clean[i] = maxU*Udif[i]/fabs(Udif[i])+Uc[i]
     return U_clean
 
-class CreateController(Thread):
+class Controller(Thread):
     def __init__(self,stopper,CRC,stateholder,Xks,Uks,ro,dt,Q,R,T,maxU=100,queue=None,speedup = 1,ticktoc = None, NoControl=False):
         Thread.__init__(self)
         self.nocontrol = NoControl
@@ -165,7 +165,7 @@ class CreateController(Thread):
         if type(queue)!=type(None):
             queue.put(row)
         #self.writer.writerow(row)
-        self.CRC.start()
+        
 
 
 
@@ -255,17 +255,17 @@ def main():
     from Trajectory import *
 
 
+    #setup controller infor
     channel = 'VICON_sawbot'
     r_wheel = 125#mm
     dt = 1.0/5.0
-
-
+    
+    maxU = 15.0
 
 
     '''Q should be 1/distance deviation ^2
     R should be 1/ speed deviation^2
     '''
-
     dist = 20.0 #mm
     ang = 0.5 # radians
 
@@ -279,32 +279,30 @@ def main():
     R = np.diag([1/( command_variation * command_variation ),
                  1/( command_variation * command_variation )] )
 
+
+
+    # Setup the Trajectory
     #Xks = loadTraj('../Media/card4-dist5.20-rcut130.00-trajs-0.npy')
     r_circle = 260#mm
     speed = 20 #64
     Xks = circle(r_circle,dt,speed)#loadTraj('../Media/card4-dist5.20-rcut130.00-trajs-0.npy')
     Xks,Uks = TrajToUko(Xks,r_wheel,dt)
 
+    # Setup the Robot interface
+    CRC = CreateRobotCmd('/dev/ttyUSB0',Create_OpMode.Full,Create_DriveMode.Direct)
 
-    maxU = 15.0
-
-
+    # setup the Vicon interface
     lock = Lock()
-
-    start = np.matrix(Xks[0][0:3]).transpose()
 
     sh = StateHolder(lock,np.matrix([0,0,0]).transpose())
 
     VI_stopper = Event() # https://christopherdavis.me/blog/threading-basics.html
     VI = ViconInterface(VI_stopper,channel,sh)
-    T = 5
-    CRC = CreateRobotCmd('/dev/ttyUSB0',Create_OpMode.Full,Create_DriveMode.Direct)
-    
-
-
     
     VI.start()
     time.sleep(0.05)
+
+    # Get initial position
 
     Xinitial = sh.GetConfig()
     print 'X_initial:',  Xinitial
@@ -313,23 +311,35 @@ def main():
     Xtraj0 = Xks[0]
     Xks = [transformToViconFrame(Xinitial,Xtraj0,Xtraj) for Xtraj in Xks]
 
+
+    # make the Controller for the trajectory
+    T = 5
     CC_stopper = Event()
     LogQ = Queue(0)
-    CC = CreateController(CC_stopper,CRC,sh,Xks,Uks,r_wheel,dt,Q,R,T,maxU,LogQ,NoControl=False)
-    Log_stopper = Event()
-    Log = Logger("Run1",Log_stopper,LogQ)
-    CC.start()
 
+    CC = Controller(CC_stopper,CRC,sh,Xks,Uks,r_wheel,dt,Q,R,T,maxU,LogQ,NoControl=False)
+    CRC.start() # this must come before CC.start()
+
+
+    #Setup the logging
+    Log_stopper = Event()
+    logname = "Run1.csv"
+    Log = Logger(logname,Log_stopper,LogQ)
+
+    # Start log and controll
+    CC.start()
     Log.start()
+    
+    # Wait for the control to be done and stop logging and vicon
     CC.join()
     Log_stopper.set()
     Log.join()
     VI_stopper.set()
-
     VI.join()
 
     print "Done"
-    plotCSVRun()
+    # Make plots!
+    plotCSVRun(logname)
 
 if __name__ == "__main__":
     sys.exit(int(main() or 0))

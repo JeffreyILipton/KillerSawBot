@@ -1,7 +1,7 @@
-﻿from threading import Thread, Lock
-from CreateStateEstimator import *
+﻿from threading import Thread, Lock, Event
+from StateEstimator import *
 from CreateInterface import *
-from CreateModel import *
+from Model import *
 from TrajectoryTests import *
 import sys
 
@@ -10,7 +10,7 @@ import csv
 from plotRun import plotCSVRun
 
 
-class CreateCharicterizer(Thread):
+class Charicterizer(Thread):
     def __init__(self,CRC,stateholder,speeds,time_step):
         Thread.__init__(self)
         self.CRC = CRC
@@ -90,10 +90,10 @@ def main():
 
     lock = Lock()
     sh = StateHolder(lock,np.matrix([0,0,0]).transpose())
-
-    VI = ViconInterface(channel,sh)
+    VI_stopper = Event()
+    VI = ViconInterface(VI_stopper,channel,sh)
     CRC = CreateRobotCmd('/dev/ttyUSB0',Create_OpMode.Full,Create_DriveMode.Direct)
-    CC = CreateCharicterizer(CRC,sh,speeds,time_step)
+    CC = Charicterizer(CRC,sh,speeds,time_step)
 
 
     
@@ -103,8 +103,8 @@ def main():
     #VTL.start()
 
     CC.join()
-    #VI.join()
-#    VTL.join()
+    VI_stopper.set()
+    VI.join()
     print "Done"
     plotCSVRun()
 
