@@ -1,5 +1,5 @@
 from threading import Thread, Event
-from Queue import Queue
+from queue import Queue
 import sys
 
 import csv
