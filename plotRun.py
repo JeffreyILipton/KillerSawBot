@@ -4,7 +4,7 @@ from numpy import genfromtxt
 import matplotlib
 import matplotlib.pyplot as plt
 import sys
-from CreateModel import minAngleDif
+from Model import minAngleDif
 
 
 def plotCSVRun(file = 'run.csv'):

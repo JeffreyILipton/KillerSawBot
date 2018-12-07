@@ -150,6 +150,7 @@ class Controller(Thread):
         self.Q = Q
         self.ro = ro
         self.stopper = stopper
+        self.queue = queue
         
       
         
@@ -228,7 +229,7 @@ class Controller(Thread):
             if step:
                 self.CRC.directDrive(U[0],U[1])
 
-            if type(queue)!=type(None):
+            if type(self.queue)!=type(None):
                 
                 # add to log
                 Xk = np.matrix(self.Xks[self.index]).transpose()
@@ -237,7 +238,7 @@ class Controller(Thread):
                 DX[2,0] = minAngleDif(X_m[2,0],self.Xks[self.index][2])
                 
                 row = [t]+[Xk[0,0], Xk[1,0],  Xk[2,0] ]+[X_m[0,0], X_m[1,0],  X_m[2,0] ]+[DX[2,0]]+[U[0],U[1]]+[Uc[0],Uc[1]]
-                queue.put(row)
+                self.queue.put(row)
 
             print "I:",self.index
             self.index +=1

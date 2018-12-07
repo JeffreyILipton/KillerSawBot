@@ -1,6 +1,6 @@
 ﻿from math import *
 import numpy as np
-
+import scipy
 '''
 let the vehicle have two wheels with speeds U1 and U2. lets U1 be the one on the left and U2 the one on the right when looking form above with the front of hte vehicle
             X_car

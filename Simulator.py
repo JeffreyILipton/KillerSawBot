@@ -1,9 +1,10 @@
-from threading import Thread, Lock
-from CreateStateEstimator import *
+from threading import Thread, Lock, Event
+from StateEstimator import *
 from CreateInterface import *
-from CreateModel import *
-from CreateController import *
+from Model import *
+from Controller import *
 from TrajectoryTests import *
+from Logging import *
 import sys
 
 from plotRun import *
@@ -27,9 +28,10 @@ class TickTock():
     def conTick(self):
         return self.ConI<=self.SimI
 
-class CreateSimulator(Thread):
-    def __init__(self,CRC_sim,stateholder,XKs,ro,dt,Q,speedup = 10,timelock=None,NoNoise=False):
+class Simulator(Thread):
+    def __init__(self,stopper, CRC_sim, stateholder, XKs, ro, dt, Q, speedup = 10, timelock=None, NoNoise=False):
         Thread.__init__(self)
+        self.stopper = stopper
         self.CRC = CRC_sim
         self.holder = stateholder
         self.ro =ro
@@ -45,7 +47,7 @@ class CreateSimulator(Thread):
     def run(self):
         X_k = np.mat(np.zeros( (6,1) ) )
         print "start sim"
-        while True and self.index<( len(self.Xks) ):
+        while (not self.stopper.is_set() ) and self.index<( len(self.Xks) ):
             time.sleep(self.dt/self.speedup)
             Uc = self.CRC.LastU()
 
@@ -117,6 +119,7 @@ class CRC_Sim:
         return np.matrix([0,0]).transpose()
 
 def main():
+    
     channel = 'VICON_sawbot'
     r_wheel = 125#mm
     dt = 1.0/5.0
@@ -143,9 +146,9 @@ def main():
 
     r_circle = 300#mm
     speed = 25 #64
-    #Xks = circle(r_circle,dt,speed)
+    Xks = circle(r_circle,dt,speed)
     #Xks = straight(1000,1.0/5.0,speed)
-    Xks = loadTraj('../Media/card2-dist5.20-rcut130.00-trajs-0.npy')
+    #Xks = loadTraj('../Media/card2-dist5.20-rcut130.00-trajs-0.npy')
     Xks,Uks = TrajToUko(Xks,r_wheel,dt)
     #Xks = Xks[:50]
 
@@ -161,21 +164,36 @@ def main():
     timelock = TickTock()
 
 
-    T = 5 #horizon
+    
+    #Setup the logging
+    LogQ = Queue(0)
+    Log_stopper = Event()
+    logname = "Run1.csv"
+    Log = Logger(logname,Log_stopper,LogQ)
 
+    #setup the controller
+    T = 5 #horizon
+    CC_stopper = Event()
     CRC =CRC_Sim()
-    CC = CreateController(CRC,sh,Xks,Uks,r_wheel,dt,Q,R,T,maxUc,speedup,timelock)
-    VSim = CreateSimulator(CRC,sh,Xks,r_wheel,dt,Q,speedup,timelock)
+    CC = Controller(CC_stopper,CRC,sh,Xks,Uks,r_wheel,dt,Q,R,T,maxUc,LogQ,speedup,timelock)
+
+    VSim_stopper = Event()
+    #setup the simulator
+    VSim = Simulator(VSim_stopper,CRC,sh,Xks,r_wheel,dt,Q,speedup,timelock)
 
     VSim.start()
     #time.sleep(0.005)
     CC.start()
+    Log.start()
 
     CC.join()
-    #VSim.join()
+    VSim_stopper.set()
+    Log_stopper.set()
+    VSim.join()
+    Log.join()
     print 'Done'
     time.sleep(0.05)
-    plotCSVRun()
+    plotCSVRun(logname)
     return 0
 
 

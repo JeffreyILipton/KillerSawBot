@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import sys
 import pylab as pl
-from CreateModel import *
+from Model import *
 
 def circle(r,dt,speed):
     # mm,s,mm/s
