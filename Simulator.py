@@ -6,7 +6,7 @@ from Controller import *
 from TrajectoryTests import *
 from Logging import *
 import sys
-
+from KillerInterface import *
 from plotRun import *
 
 class TickTock():
@@ -118,6 +118,21 @@ class CRC_Sim:
             return self.Us[-1]
         return np.matrix([0,0]).transpose()
 
+class KillerSim(KillerRobotCmd):
+    def __init__(self,log_queue = None):
+        KillerRobotCmd.__init__(self,None,log_queue)
+        self.Us = []
+
+    def directDrive(self,V1,V2):
+        self.drive(V1,V2)
+        self.Us.append(np.matrix([V1,V2]).transpose())
+
+    def LastU(self):
+        if len(self.Us):
+            return self.Us[-1]
+        return np.matrix([0,0]).transpose()
+
+
 def main():
     
     channel = 'VICON_sawbot'
@@ -163,42 +178,52 @@ def main():
     sh = StateHolder(lock,start)
     timelock = TickTock()
 
-
+    runNum = 8
     
     #Setup the logging
     LogQ = Queue(0)
     Log_stopper = Event()
-    logname = "Run4.csv"
+    logname = "Run%i.csv"%runNum
     Log = Logger(logname,Log_stopper,LogQ)
 
     LogQ2 = Queue(0)
     Log_stopper2 = Event()
-    logname2 = "time4.csv"
+    logname2 = "time%i.csv"%runNum
     Log2 = Logger(logname2,Log_stopper2,LogQ2)
+
+    LogQ3 = Queue(0)
+    Log_stopper3 = Event()
+    logname3 = "cmds%i.csv"%runNum
+    Log3 = Logger(logname3,Log_stopper3,LogQ3)
 
     #setup the controller
     T = 5 #horizon
+    RunControl = True
     CC_stopper = Event()
-    CRC =CRC_Sim()
-    CC = Controller(CC_stopper,CRC,sh,Xks,Uks,r_wheel,dt,Q,R,T,maxUc,LogQ,True,speedup,timelock,LogQ2)
+    CRC = KillerSim(LogQ3)  # CRC_Sim()
+    CC = Controller(CC_stopper,CRC,sh,Xks,Uks,r_wheel,dt,Q,R,T,maxUc,LogQ,not RunControl,speedup,timelock,LogQ2)
 
     VSim_stopper = Event()
     #setup the simulator
     VSim = Simulator(VSim_stopper,CRC,sh,Xks,r_wheel,dt,Q,speedup,timelock)
-
+    CRC.start()
     VSim.start()
     #time.sleep(0.005)
     CC.start()
     Log.start()
     Log2.start()
+    Log3.start()
 
     CC.join()
+    CRC.stop()
     VSim_stopper.set()
     Log_stopper.set()
     Log_stopper2.set()
+    Log_stopper3.set()
     VSim.join()
     Log.join()
     Log2.join()
+    Log3.join()
     print 'Done'
     time.sleep(0.05)
     plotCSVRun(logname)
