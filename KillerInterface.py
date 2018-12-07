@@ -36,6 +36,9 @@ class KillerRobotInMessage(object):
     def serialized(self):
         return pickle.dump(self) + str(self.ack) + str(self.error_type)
 
+    def __str__(self):
+        return "InMsg" + "," + str(self.ack) + "," + str(self.error_type)
+
 class KillerRobotCmd(object):
     """
     Initializes Killer robot.
@@ -121,13 +124,18 @@ class KillerRobotCmd(object):
     def _write_message(self, message):
         if self.is_logging:
             self.logQueue.put(str(message).split(','))
-            
+
+        response = None    
         if self.is_debug:
-            return KillerRobotInMessage(True)
+            response = KillerRobotInMessage(True)
         else:
             self.port.write(message.serialized())
             response = pickle.loads(self.port.read_until())
-            if not response.ack:
-                raise IOError("Robot did not successfully parse command")
-            return response
+
+        if self.is_logging:
+            self.logQueue.put(str(response).split(','))
+        
+        if not response.ack:
+            raise IOError("Robot did not successfully parse command")
+        return response
 
