@@ -330,3 +330,5 @@ ASALocalRun/
 .mfractor/
 *.sln
 *.pyproj
+*.csv
+*.xlsx
