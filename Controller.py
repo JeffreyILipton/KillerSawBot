@@ -138,7 +138,7 @@ def thresholdU(U,Uc,maxU):
     return U_clean
 
 class Controller(Thread):
-    def __init__(self,stopper,CRC,stateholder,Xks,Uks,ro,dt,Q,R,T,maxU=100,queue=None,speedup = 1,ticktoc = None, NoControl=False):
+    def __init__(self,stopper,CRC,stateholder,Xks,Uks,ro,dt,Q,R,T,maxU=100,StateQueue=None,NoControl=False,speedup = 1,ticktoc = None, SimQ = None):
         Thread.__init__(self)
         self.nocontrol = NoControl
         self.speedup = speedup
@@ -150,7 +150,8 @@ class Controller(Thread):
         self.Q = Q
         self.ro = ro
         self.stopper = stopper
-        self.queue = queue
+        self.state_queue = StateQueue
+        self.simq = SimQ
         
       
         
@@ -158,16 +159,16 @@ class Controller(Thread):
         self.Xks = Xks
         self.maxU = maxU
         self.index = 0
-        
-        #self.csvFile = open("Run.csv",'wb')
-        #self.writer = csv.writer(self.csvFile)
 
-        row=['Time','X_target','Y_target','Angle_target','X_actual','Y_actual','Angle_actual','DX angle','U[0]','U[1]','Uc[0]','Uc[1]']
-        if type(queue)!=type(None):
-            queue.put(row)
-        #self.writer.writerow(row)
-        
 
+        
+        if type(self.state_queue)!=type(None):
+            row=['Time','X_target','Y_target','Angle_target','X_actual','Y_actual','Angle_actual','DX angle','U[0]','U[1]','Uc[0]','Uc[1]']
+            self.state_queue.put(row)
+        
+        if type(SimQ) != type(None):
+            row = ["time","dt","speedup"]
+            self.simq.put(row)
 
 
         
@@ -229,7 +230,11 @@ class Controller(Thread):
             if step:
                 self.CRC.directDrive(U[0],U[1])
 
-            if type(self.queue)!=type(None):
+            if type(self.simq) != type(None):
+                row = [time_taken,self.dt,self.speedup]
+                self.simq.put(row)
+
+            if type(self.state_queue)!=type(None):
                 
                 # add to log
                 Xk = np.matrix(self.Xks[self.index]).transpose()
@@ -238,7 +243,7 @@ class Controller(Thread):
                 DX[2,0] = minAngleDif(X_m[2,0],self.Xks[self.index][2])
                 
                 row = [t]+[Xk[0,0], Xk[1,0],  Xk[2,0] ]+[X_m[0,0], X_m[1,0],  X_m[2,0] ]+[DX[2,0]]+[U[0],U[1]]+[Uc[0],Uc[1]]
-                self.queue.put(row)
+                self.state_queue.put(row)
 
             print "I:",self.index
             self.index +=1
@@ -250,10 +255,6 @@ class Controller(Thread):
         print "Control Done"
 
 def main():
-    from plotRun import *
-    from Logging import *
-    from TrajectoryTests import *
-    from Trajectory import *
 
 
     #setup controller infor
@@ -343,4 +344,9 @@ def main():
     plotCSVRun(logname)
 
 if __name__ == "__main__":
+    from plotRun import *
+    from Logging import *
+    from TrajectoryTests import *
+    from Trajectory import *
+
     sys.exit(int(main() or 0))

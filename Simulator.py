@@ -123,7 +123,7 @@ def main():
     channel = 'VICON_sawbot'
     r_wheel = 125#mm
     dt = 1.0/5.0
-
+    dt = 0.15
 
     '''Q should be 1/distance deviation ^2
     R should be 1/ speed deviation^2
@@ -168,14 +168,19 @@ def main():
     #Setup the logging
     LogQ = Queue(0)
     Log_stopper = Event()
-    logname = "Run1.csv"
+    logname = "Run4.csv"
     Log = Logger(logname,Log_stopper,LogQ)
+
+    LogQ2 = Queue(0)
+    Log_stopper2 = Event()
+    logname2 = "time4.csv"
+    Log2 = Logger(logname2,Log_stopper2,LogQ2)
 
     #setup the controller
     T = 5 #horizon
     CC_stopper = Event()
     CRC =CRC_Sim()
-    CC = Controller(CC_stopper,CRC,sh,Xks,Uks,r_wheel,dt,Q,R,T,maxUc,LogQ,speedup,timelock)
+    CC = Controller(CC_stopper,CRC,sh,Xks,Uks,r_wheel,dt,Q,R,T,maxUc,LogQ,True,speedup,timelock,LogQ2)
 
     VSim_stopper = Event()
     #setup the simulator
@@ -185,12 +190,15 @@ def main():
     #time.sleep(0.005)
     CC.start()
     Log.start()
+    Log2.start()
 
     CC.join()
     VSim_stopper.set()
     Log_stopper.set()
+    Log_stopper2.set()
     VSim.join()
     Log.join()
+    Log2.join()
     print 'Done'
     time.sleep(0.05)
     plotCSVRun(logname)
