@@ -3,6 +3,8 @@ import pickle
 from Logging import Queue
 from enum import IntEnum
 
+UNLIKELY_NEWLINE = "THIS IS NOT GOOD CODING PRACTICE".encode('utf-8')
+
 class KillerRobotProtocol(IntEnum):
     Start = 0
     LeftMotor = 1
@@ -23,7 +25,7 @@ class KillerRobotOutMessage(object):
         self.second_value = second_value
 
     def serialized(self):
-        return pickle.dump(self) + "\n".encode('utf-8')
+        return pickle.dump(self)
 
     def __str__(self):
         return str(self.message_type) +","+ str(self.first_value) +","+ str(self.second_value)
@@ -34,7 +36,7 @@ class KillerRobotInMessage(object):
         self.error_type = error_type
 
     def serialized(self):
-        return pickle.dump(self) + str(self.ack) + str(self.error_type)
+        return pickle.dump(self)
 
     def __str__(self):
         return "InMsg" + "," + str(self.ack) + "," + str(self.error_type)
@@ -130,7 +132,10 @@ class KillerRobotCmd(object):
             response = KillerRobotInMessage(True)
         else:
             self.port.write(message.serialized())
-            response = pickle.loads(self.port.read_until())
+            self.port.write(UNLIKELY_NEWLINE)
+            response = self.port.read_until(UNLIKELY_NEWLINE)
+            response = response[0: len(response) - len(UNLIKELY_NEWLINE)]
+            response = pickle.loads(response)
 
         if self.is_logging:
             self.logQueue.put(str(response).split(','))

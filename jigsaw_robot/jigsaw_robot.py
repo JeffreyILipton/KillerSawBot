@@ -21,6 +21,7 @@ Returns nothing immediately.
 def lower_drill(speed : float):
     slide_module.lower_drill(speed)
 
+
 """
 Turns on/off the drill.
 is_active - Whether the drill should be active or turned off.
