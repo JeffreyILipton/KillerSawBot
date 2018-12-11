@@ -139,8 +139,7 @@ class KillerRobotCmd(object):
             response = self.port.read_until(UNLIKELY_NEWLINE)
             response = response[0: len(response) - len(UNLIKELY_NEWLINE)]
             print response
-            response = pickle.loads(response, protocol = 2)
-
+            response = pickle.loads(response)
         if self.is_logging:
             self.logQueue.put(str(response).split(','))
         
