@@ -1,6 +1,7 @@
 import serial
 import pickle
 import sys
+import time
 from Logging import Queue
 from enum import IntEnum
 
@@ -138,7 +139,6 @@ class KillerRobotCmd(object):
             self.port.write(UNLIKELY_NEWLINE)
             response = self.port.read_until(UNLIKELY_NEWLINE)
             response = response[0: len(response) - len(UNLIKELY_NEWLINE)]
-            print response
             response = pickle.loads(response)
         if self.is_logging:
             self.logQueue.put(str(response).split(','))
@@ -150,6 +150,12 @@ class KillerRobotCmd(object):
 def main():
     cmd = KillerRobotCmd("/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DN04ASN0-if00-port0")
     cmd.start()
+    cmd.drive(10, 10)
+    time.sleep(3)
+    cmd.drive(0, 0)
+    cmd.drill()
+    cmd.stop()
+
     return 0
 
 if __name__ == "__main__":

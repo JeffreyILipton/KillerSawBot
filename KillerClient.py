@@ -76,12 +76,11 @@ class KillerRobotClient(object):
 			response = KillerRobotInMessage(False, "Wrong input type")
 		self.port.write(response.serialized())
 		self.port.write(UNLIKELY_NEWLINE)
-		print(response.serialized(), UNLIKELY_NEWLINE)
 
 	def _execute_command(self, in_command : KillerRobotOutMessage):
 		command = in_command.message_type
 		if command == KillerRobotProtocol.Start:
-			print("Just got a command")
+			print("Initialized")
 			# don't know what to do here lol
 		if command == KillerRobotProtocol.Stop:
 			self.active = False
