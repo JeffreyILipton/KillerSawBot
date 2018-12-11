@@ -30,7 +30,7 @@ class KillerRobotOutMessage(object):
         self.second_value = second_value
 
     def serialized(self):
-        return pickle.dumps(self)
+        return pickle.dumps(self, protocol = 2)
 
     def __str__(self):
         return str(self.message_type) +","+ str(self.first_value) +","+ str(self.second_value)
@@ -41,7 +41,7 @@ class KillerRobotInMessage(object):
         self.error_type = error_type
 
     def serialized(self):
-        return pickle.dumps(self)
+        return pickle.dumps(self, protocol = 2)
 
     def __str__(self):
         return "InMsg" + "," + str(self.ack) + "," + str(self.error_type)
@@ -67,7 +67,7 @@ class KillerRobotClient(object):
 	def _poll_for_commands(self):
 		in_message = self.port.read_until(UNLIKELY_NEWLINE)
 		in_message = in_message[0: len(in_message) - len(UNLIKELY_NEWLINE)]
-		in_command = pickle.loads(in_message)
+		in_command = pickle.loads(in_message. protocol = 2)
 		response = None
 		if isinstance(in_command, KillerRobotOutMessage):
 			self._execute_command(in_command)

@@ -1,5 +1,6 @@
 import serial
 import pickle
+import sys
 from Logging import Queue
 from enum import IntEnum
 
@@ -25,7 +26,7 @@ class KillerRobotOutMessage(object):
         self.second_value = second_value
 
     def serialized(self):
-        return pickle.dump(self)
+        return pickle.dumps(self, protocol = 2)
 
     def __str__(self):
         return str(self.message_type) +","+ str(self.first_value) +","+ str(self.second_value)
@@ -36,7 +37,7 @@ class KillerRobotInMessage(object):
         self.error_type = error_type
 
     def serialized(self):
-        return pickle.dump(self)
+        return pickle.dumps(self, protocol = 2)
 
     def __str__(self):
         return "InMsg" + "," + str(self.ack) + "," + str(self.error_type)
@@ -63,7 +64,9 @@ class KillerRobotCmd(object):
     Starts up robot; opens port and tells robot to wake up.
     """
     def start(self):
-        if self.port: self.port.open()
+        self.port.reset_input_buffer()
+        self.port.reset_output_buffer()
+        # if self.port: self.port.open()
         start_message = KillerRobotOutMessage(KillerRobotProtocol.Start)
         self._write_message(start_message)
 
@@ -135,7 +138,8 @@ class KillerRobotCmd(object):
             self.port.write(UNLIKELY_NEWLINE)
             response = self.port.read_until(UNLIKELY_NEWLINE)
             response = response[0: len(response) - len(UNLIKELY_NEWLINE)]
-            response = pickle.loads(response)
+            print response
+            response = pickle.loads(response, protocol = 2)
 
         if self.is_logging:
             self.logQueue.put(str(response).split(','))
@@ -144,3 +148,10 @@ class KillerRobotCmd(object):
             raise IOError("Robot did not successfully parse command")
         return response
 
+def main():
+    cmd = KillerRobotCmd("/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DN04ASN0-if00-port0")
+    cmd.start()
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(int(main() or 0))
