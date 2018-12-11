@@ -3,6 +3,8 @@
 import serial
 import pickle
 import time
+import sys
+from enum import IntEnum
 
 import jigsaw_robot
 
@@ -28,7 +30,7 @@ class KillerRobotOutMessage(object):
         self.second_value = second_value
 
     def serialized(self):
-        return pickle.dump(self)
+        return pickle.dumps(self)
 
     def __str__(self):
         return str(self.message_type) +","+ str(self.first_value) +","+ str(self.second_value)
@@ -39,7 +41,7 @@ class KillerRobotInMessage(object):
         self.error_type = error_type
 
     def serialized(self):
-        return pickle.dump(self)
+        return pickle.dumps(self)
 
     def __str__(self):
         return "InMsg" + "," + str(self.ack) + "," + str(self.error_type)
@@ -51,8 +53,10 @@ class KillerRobotClient(object):
 
 	def start(self):
 		self.active = True
-		while(active):
-			poll_for_commands()
+		self.port.reset_input_buffer()
+		self.port.reset_output_buffer()
+		while(self.active):
+			self._poll_for_commands()
 
 		self.stop()
 
@@ -66,17 +70,18 @@ class KillerRobotClient(object):
 		in_command = pickle.loads(in_message)
 		response = None
 		if isinstance(in_command, KillerRobotOutMessage):
-			_execute_command(in_command)
+			self._execute_command(in_command)
 			response = KillerRobotInMessage(True)
 		else:
 			response = KillerRobotInMessage(False, "Wrong input type")
-		serial.write(response.serialized())
-		serial.write('\n'.encode())
+		self.port.write(response.serialized())
+		self.port.write(UNLIKELY_NEWLINE)
+		print(response.serialized(), UNLIKELY_NEWLINE)
 
-	def _execute_command(in_command : KillerRobotOutMessage):
+	def _execute_command(self, in_command : KillerRobotOutMessage):
 		command = in_command.message_type
 		if command == KillerRobotProtocol.Start:
-			pass
+			print("Just got a command")
 			# don't know what to do here lol
 		if command == KillerRobotProtocol.Stop:
 			self.active = False
@@ -106,7 +111,7 @@ class KillerRobotClient(object):
 			jigsaw_robot.activate_jigsaw(False)
 			
 def main():
-	client = KillerRobotClient("/dev/serial")
+	client = KillerRobotClient("/dev/ttyUSB0")
 	client.start()
 
 if __name__ == "__main__":
