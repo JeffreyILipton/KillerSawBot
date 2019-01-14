@@ -61,7 +61,6 @@ class KillerRobotClient(object):
 		self.stop()
 
 	def stop(self):
-		self.port.close()
 		jigsaw_robot.panic()
 
 	def _poll_for_commands(self):
@@ -83,7 +82,7 @@ class KillerRobotClient(object):
 			print("Initialized")
 			# don't know what to do here lol
 		if command == KillerRobotProtocol.Stop:
-			self.active = False
+			self.stop()
 		if command == KillerRobotProtocol.LeftMotor:
 			jigsaw_robot.move_left_wheel(in_command.first_value)
 		if command == KillerRobotProtocol.RightMotor:
