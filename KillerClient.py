@@ -71,7 +71,7 @@ class KillerRobotClient(object):
     def _poll_for_commands(self):
         in_message = self.port.read_until(UNLIKELY_NEWLINE)
         in_message = in_message[0: len(in_message) - len(UNLIKELY_NEWLINE)]
-        in_command = pickle.loads(in_message)
+        in_command = pickle.loads(in_message, protocol = 2)
         response = None
         if isinstance(in_command, KillerRobotOutMessage):
             threading.Thread(

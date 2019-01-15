@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import serial
 import pickle
 import sys
@@ -59,7 +60,7 @@ class KillerRobotCmd(object):
         self.is_debug = False if port else True
         self.port = None
         if not self.is_debug:
-            self.port = serial.Serial(port)
+            self.port = serial.Serial(port, timeout = 10)
 
     """
     Starts up robot; opens port and tells robot to wake up.
