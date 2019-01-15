@@ -153,7 +153,6 @@ def main():
     cmd.drive(10, 10)
     time.sleep(3)
     cmd.drive(0, 0)
-    cmd.drill()
     cmd.stop()
 
     return 0
