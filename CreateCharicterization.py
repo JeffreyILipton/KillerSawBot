@@ -1,6 +1,7 @@
 ﻿from threading import Thread, Lock, Event
 from StateEstimator import *
 from CreateInterface import *
+from KillerInterface import *
 from Model import *
 from TrajectoryTests import *
 import sys
@@ -62,7 +63,8 @@ class Charicterizer(Thread):
 
             if ((index > (len(self.speeds)-1) )or tk>(len(self.speeds)*self.time) ):
                 self.csvFile.close()
-                self.CRC.stop()
+                self.CRC.drive(0,0)
+                # self.CRC.stop()
                 print "closed"
                 break
             else:
@@ -70,7 +72,8 @@ class Charicterizer(Thread):
                 if(lastspeed != speed): 
                     lastspeed = speed
                     print speed
-                    self.CRC.directDrive(speed,speed)
+                    self.CRC.drive(speed,speed)
+                    # self.CRC.directDrive(speed,speed)
                 if last_t!= t:
                     row = [t,speed]+[X[0,0], X[1,0],  X[2,0] ]
                     self.writer.writerow(row)
@@ -80,9 +83,9 @@ class Charicterizer(Thread):
 
 def main():
     
-    channel = 'VICON_sawbot'#'VICON_create8'
+    channel = 'VICON_KillerSawBot'#'VICON_create8'
     s = 60
-    speeds = [10,0,20,0,30,0]
+    speeds = [100,0,200,0,300,0]
     time_step = 5 #s
 
 
@@ -92,7 +95,8 @@ def main():
     sh = StateHolder(lock,np.matrix([0,0,0]).transpose())
     VI_stopper = Event()
     VI = ViconInterface(VI_stopper,channel,sh)
-    CRC = CreateRobotCmd('/dev/ttyUSB0',Create_OpMode.Full,Create_DriveMode.Direct)
+    # CRC = CreateRobotCmd('/dev/ttyUSB0',Create_OpMode.Full,Create_DriveMode.Direct)
+    CRC = KillerRobotCmd("/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DN04ASN0-if00-port0")
     CC = Charicterizer(CRC,sh,speeds,time_step)
 
 

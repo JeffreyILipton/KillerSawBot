@@ -51,8 +51,8 @@ class KillerRobotCmd(object):
     """
     def __init__(self, port , log_queue = None):
         # robot velocity limits for both wheels
-        self.velocity_min = -100 #mm/s
-        self.velocity_max = 100 #mm/s
+        self.velocity_min = -500 #mm/s
+        self.velocity_max = 500 #mm/s
         self.is_logging = True if log_queue else False
         self.logQueue = log_queue
 
@@ -150,8 +150,14 @@ class KillerRobotCmd(object):
 def main():
     cmd = KillerRobotCmd("/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DN04ASN0-if00-port0")
     cmd.start()
-    cmd.drive(10, 10)
-    time.sleep(3)
+    cmd.drive(500, 500)
+    time.sleep(2)
+    cmd.drive(-500, -500)
+    time.sleep(2)
+    cmd.drive(500, -500)
+    time.sleep(2)
+    cmd.drive(-500, 500)
+    time.sleep(2)
     cmd.drive(0, 0)
     cmd.drill()
     cmd.stop()
