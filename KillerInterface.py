@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import serial
 import time
 from enum import IntEnum
