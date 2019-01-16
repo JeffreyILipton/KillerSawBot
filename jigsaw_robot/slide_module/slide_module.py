@@ -4,7 +4,7 @@ from jigsaw_robot.config import (
     SLIDE_TICKS_PER_LINEAR_MM,
     DRILL_PLUNGE_DEPTH,
     JIGSAW_PLUNGE_DEPTH
-    )
+)
 
 from jigsaw_robot.roboclaw.roboclaw import Roboclaw
 
