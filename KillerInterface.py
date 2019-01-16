@@ -106,9 +106,9 @@ class KillerRobotCmd(object):
     def _write_message(self, action, value1=None, value2=None):
         message = str(int(action))
         if value1:
-            message = message + str(value1) + ","
+            message = message + ',' + str(value1)
             if value2:
-                message = message + str(value2)
+                message = message + ',' + str(value2)
 
         if self.is_logging:
             self.logQueue.put(message)

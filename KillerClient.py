@@ -70,7 +70,7 @@ class KillerRobotClient(object):
         if command == KillerRobotProtocol.JigsawRaise:
             jigsaw_robot.raise_jigsaw(5)
         if command == KillerRobotProtocol.JigsawLower:
-            jigsaw_robot.lpower_jigsaw(5)
+            jigsaw_robot.lower_jigsaw(5)
         if command == KillerRobotProtocol.JigsawStart:
             jigsaw_robot.activate_jigsaw(True)
         if command == KillerRobotProtocol.JigsawStop:
