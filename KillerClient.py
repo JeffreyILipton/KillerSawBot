@@ -39,8 +39,9 @@ class KillerRobotClient(object):
         jigsaw_robot.panic()
 
     def _poll_for_commands(self):
-        input_string = self.port.read_until('\n')[0:-1]
+        input_string = self.port.readline()[0:-1]
         input_values = input_string.split(",")
+        print("Command received!", input_string)
         self._execute_command(input_values)
 
     def _execute_command(self, input_values):
@@ -51,12 +52,12 @@ class KillerRobotClient(object):
         if command == KillerRobotProtocol.Stop:
             self.stop()
         if command == KillerRobotProtocol.LeftMotor:
-            jigsaw_robot.move_left_wheel(input_values[1])
+            jigsaw_robot.move_left_wheel(float(input_values[1]))
         if command == KillerRobotProtocol.RightMotor:
-            jigsaw_robot.move_right_wheel(input_values[1])
+            jigsaw_robot.move_right_wheel(float(input_values[1]))
         if command == KillerRobotProtocol.LeftAndRightMotor:
-            jigsaw_robot.move_left_wheel(input_values[1])
-            jigsaw_robot.move_right_wheel(input_values[2])
+            jigsaw_robot.move_left_wheel(float(input_values[1]))
+            jigsaw_robot.move_right_wheel(float(input_values[2]))
         if command == KillerRobotProtocol.Drill:
             jigsaw_robot.activate_drill(True)
             jigsaw_robot.lower_drill(1)

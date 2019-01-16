@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import serial
 import time
+import sys
 from enum import IntEnum
 
 
@@ -112,7 +113,8 @@ class KillerRobotCmd(object):
         if self.is_logging:
             self.logQueue.put(message)
         else:
-            self.port.write(message.encode('utf-8') + '\n')
+            message = message + '\n'
+            self.port.write(message.encode('ascii'))
 
 def main():
     cmd = KillerRobotCmd("/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DN04ASN0-if00-port0")
