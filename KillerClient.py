@@ -39,7 +39,7 @@ class KillerRobotClient(object):
         jigsaw_robot.panic()
 
     def _poll_for_commands(self):
-        input_string = self.port.readline()[0:-1]
+        input_string = self.port.readline().decode('ascii')[0:-1]
         input_values = input_string.split(",")
         print("Command received!", input_string)
         self._execute_command(input_values)
