@@ -1,4 +1,3 @@
-import time
 import pigpio
 
 from jigsaw_robot.config import (
