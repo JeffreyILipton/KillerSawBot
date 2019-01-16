@@ -1,15 +1,10 @@
 #!usr/bin/python3
-# this auto inits the robot
 import serial
-import pickle
 import time
 import sys
-import threading
 from enum import IntEnum
 
 import jigsaw_robot
-
-UNLIKELY_NEWLINE = "THIS IS NOT GOOD CODING PRACTICE".encode('utf-8')
 
 
 class KillerRobotProtocol(IntEnum):
@@ -24,31 +19,6 @@ class KillerRobotProtocol(IntEnum):
     JigsawStop = 8
     Status = 9
     Stop = 10
-
-
-class KillerRobotOutMessage(object):
-    def __init__(self, message_type, first_value=None, second_value=None):
-        self.message_type = message_type
-        self.first_value = first_value
-        self.second_value = second_value
-
-    def serialized(self):
-        return pickle.dumps(self, protocol=2)
-
-    def __str__(self):
-        return str(self.message_type) + "," + str(self.first_value) + "," + str(self.second_value)
-
-
-class KillerRobotInMessage(object):
-    def __init__(self, ack, error_type=None):
-        self.ack = ack
-        self.error_type = error_type
-
-    def serialized(self):
-        return pickle.dumps(self, protocol=2)
-
-    def __str__(self):
-        return "InMsg" + "," + str(self.ack) + "," + str(self.error_type)
 
 
 class KillerRobotClient(object):
@@ -69,33 +39,24 @@ class KillerRobotClient(object):
         jigsaw_robot.panic()
 
     def _poll_for_commands(self):
-        in_message = self.port.read_until(UNLIKELY_NEWLINE)
-        in_message = in_message[0: len(in_message) - len(UNLIKELY_NEWLINE)]
-        in_command = pickle.loads(in_message, protocol = 2)
-        response = None
-        if isinstance(in_command, KillerRobotOutMessage):
-            threading.Thread(
-                group=None, target=self._execute_command, args=(KillerRobotOutMessage))
-            response = KillerRobotInMessage(True)
-        else:
-            response = KillerRobotInMessage(False, "Wrong input type")
-        self.port.write(response.serialized())
-        self.port.write(UNLIKELY_NEWLINE)
+        input_string = self.port.read_until('\n')[0:-1]
+        input_values = input_string.split(",")
+        self._execute_command(input_values)
 
-    def _execute_command(self, in_command: KillerRobotOutMessage):
-        command = in_command.message_type
+    def _execute_command(self, input_values):
+        command = input_values[0]
         if command == KillerRobotProtocol.Start:
             print("Initialized")
             # don't know what to do here lol
         if command == KillerRobotProtocol.Stop:
             self.stop()
         if command == KillerRobotProtocol.LeftMotor:
-            jigsaw_robot.move_left_wheel(in_command.first_value)
+            jigsaw_robot.move_left_wheel(input_values[1])
         if command == KillerRobotProtocol.RightMotor:
-            jigsaw_robot.move_right_wheel(in_command.first_value)
+            jigsaw_robot.move_right_wheel(input_values[1])
         if command == KillerRobotProtocol.LeftAndRightMotor:
-            jigsaw_robot.move_left_wheel(in_command.first_value)
-            jigsaw_robot.move_right_wheel(in_command.second_value)
+            jigsaw_robot.move_left_wheel(input_values[1])
+            jigsaw_robot.move_right_wheel(input_values[2])
         if command == KillerRobotProtocol.Drill:
             jigsaw_robot.activate_drill(True)
             jigsaw_robot.lower_drill(1)
