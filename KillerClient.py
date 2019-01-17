@@ -40,8 +40,10 @@ class KillerRobotClient(object):
 
     def _poll_for_commands(self):
         input_bytes = self.port.readline()
-        input_string = input_bytes.decode('ascii')
-        input_values = input_string[0:-1].split(",")
+        input_string = input_bytes.decode('ascii').replace('\n', '').replace('\r', '')
+        if not input_string:
+            return
+        input_values = input_string.split(",")
         print("Command received! In bytes:", input_bytes, " | In string format:", input_string)
         self._execute_command(input_values)
 
