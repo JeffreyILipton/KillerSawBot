@@ -39,9 +39,10 @@ class KillerRobotClient(object):
         jigsaw_robot.panic()
 
     def _poll_for_commands(self):
-        input_string = self.port.readline().decode('ascii')[0:-1]
-        input_values = input_string.split(",")
-        print("Command received!", input_string)
+        input_bytes = self.port.readline()
+        input_string = input_bytes.decode('ascii')
+        input_values = input_string[0:-1].split(",")
+        print("Command received! In bytes:", input_bytes, " | In string format:", input_string)
         self._execute_command(input_values)
 
     def _execute_command(self, input_values):
@@ -77,7 +78,7 @@ class KillerRobotClient(object):
             jigsaw_robot.activate_jigsaw(False)
         else:
             jigsaw_robot.panic()
-            raise IOError("Unsupported command! Command was", command)
+            raise IOError("Unsupported command! Command was ", command)
 
 def main():
     client = KillerRobotClient("/dev/ttyUSB0")
