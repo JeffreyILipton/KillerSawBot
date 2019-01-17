@@ -75,6 +75,8 @@ class KillerRobotClient(object):
             jigsaw_robot.activate_jigsaw(True)
         if command == KillerRobotProtocol.JigsawStop:
             jigsaw_robot.activate_jigsaw(False)
+        jigsaw_robot.panic()
+        raise IOError("Unsupported command!")
 
 
 def main():

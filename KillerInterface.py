@@ -6,16 +6,16 @@ from enum import IntEnum
 
 
 class KillerRobotProtocol(IntEnum):
-    Start = 0
+    Start = 0 # doesn't really do anything :p
     LeftMotor = 1
     RightMotor = 2
     LeftAndRightMotor = 3
-    Drill = 4
-    JigsawLower = 5
+    Drill = 4 # blocks client for 40 seconds! remember to wait after using this
+    JigsawLower = 5 
     JigsawRaise = 6
     JigsawStart = 7
     JigsawStop = 8
-    Status = 9
+    Status = 9 # currently unhandled
     Stop = 10
 
 
