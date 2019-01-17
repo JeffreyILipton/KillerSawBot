@@ -49,34 +49,35 @@ class KillerRobotClient(object):
         if command == KillerRobotProtocol.Start:
             print("Initialized")
             # don't know what to do here lol
-        if command == KillerRobotProtocol.Stop:
+        elif command == KillerRobotProtocol.Stop:
             self.stop()
-        if command == KillerRobotProtocol.LeftMotor:
+        elif command == KillerRobotProtocol.LeftMotor:
             jigsaw_robot.move_left_wheel(float(input_values[1]))
-        if command == KillerRobotProtocol.RightMotor:
+        elif command == KillerRobotProtocol.RightMotor:
             jigsaw_robot.move_right_wheel(float(input_values[1]))
-        if command == KillerRobotProtocol.LeftAndRightMotor:
+        elif command == KillerRobotProtocol.LeftAndRightMotor:
             jigsaw_robot.move_left_wheel(float(input_values[1]))
             jigsaw_robot.move_right_wheel(float(input_values[2]))
-        if command == KillerRobotProtocol.Drill:
+        elif command == KillerRobotProtocol.Drill:
             jigsaw_robot.activate_drill(True)
             jigsaw_robot.lower_drill(1)
             time.sleep(30)
             jigsaw_robot.raise_drill(5)
             jigsaw_robot.activate_drill(False)
             time.sleep(10)
-        if command == KillerRobotProtocol.JigsawLower:
+        elif command == KillerRobotProtocol.JigsawLower:
             jigsaw_robot.lower_jigsaw(5)
-        if command == KillerRobotProtocol.JigsawRaise:
+        elif command == KillerRobotProtocol.JigsawRaise:
             jigsaw_robot.raise_jigsaw(5)
-        if command == KillerRobotProtocol.JigsawLower:
+        elif command == KillerRobotProtocol.JigsawLower:
             jigsaw_robot.lower_jigsaw(5)
-        if command == KillerRobotProtocol.JigsawStart:
+        elif command == KillerRobotProtocol.JigsawStart:
             jigsaw_robot.activate_jigsaw(True)
-        if command == KillerRobotProtocol.JigsawStop:
+        elif command == KillerRobotProtocol.JigsawStop:
             jigsaw_robot.activate_jigsaw(False)
-        jigsaw_robot.panic()
-        raise IOError("Unsupported command!")
+        else:
+            jigsaw_robot.panic()
+            raise IOError("Unsupported command!")
 
 
 def main():
