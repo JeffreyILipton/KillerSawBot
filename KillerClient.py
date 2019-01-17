@@ -77,8 +77,7 @@ class KillerRobotClient(object):
             jigsaw_robot.activate_jigsaw(False)
         else:
             jigsaw_robot.panic()
-            raise IOError("Unsupported command!")
-
+            raise IOError("Unsupported command! Command was", command)
 
 def main():
     client = KillerRobotClient("/dev/ttyUSB0")
