@@ -1,12 +1,19 @@
 ﻿from threading import Thread, Lock, Event
 from StateEstimator import *
 from CreateInterface import *
+from KillerInterface import KillerRobotCmd
 from Model import *
 from Simulator import TickTock
 
 import scipy
 from scipy.optimize import minimize
 import sys
+
+# moved here from the bottom:
+from plotRun import *
+from Logging import *
+from TrajectoryTests import *
+from Trajectory import *
 
 #import csv
 
@@ -228,7 +235,7 @@ class Controller(Thread):
             time.sleep(waittime/self.speedup)
 
             if step:
-                self.CRC.directDrive(U[0],U[1])
+                self.CRC.drive(U[0],U[1])
 
             if type(self.simq) != type(None):
                 row = [time_taken,self.dt,self.speedup]
@@ -291,7 +298,9 @@ def main():
     Xks,Uks = TrajToUko(Xks,r_wheel,dt)
 
     # Setup the Robot interface
-    CRC = CreateRobotCmd('/dev/ttyUSB0',Create_OpMode.Full,Create_DriveMode.Direct)
+    # CRC = CreateRobotCmd('/dev/ttyUSB0',Create_OpMode.Full,Create_DriveMode.Direct)
+    CRC = KillerRobotCmd("/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DN04ASN0-if00-port0")
+
 
     # setup the Vicon interface
     lock = Lock()
@@ -344,9 +353,10 @@ def main():
     plotCSVRun(logname)
 
 if __name__ == "__main__":
-    from plotRun import *
-    from Logging import *
-    from TrajectoryTests import *
-    from Trajectory import *
+    # lmao most of these imports just end up overwriting main()
+    # from plotRun import *
+    # from Logging import *
+    # from TrajectoryTests import *
+    # from Trajectory import *
 
     sys.exit(int(main() or 0))

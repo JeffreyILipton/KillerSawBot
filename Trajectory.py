@@ -1,4 +1,5 @@
 import numpy as np
+from math import cos, sin
 
 def transformToTrajFrame(offset,Xtraj0,X):
         

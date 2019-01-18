@@ -137,15 +137,16 @@ def makeSuperQ(Q,T):
 
 
 def DelayModel(speed):
-    if speed < 17.5: return 2.0
+    # unsure if this is still useful, removing
+    # if speed < 17.5: return 2.0
    
-    Mslope = -0.021
-    MIntercept = 1.377
+    Mslope = -0.000305
+    MIntercept = 0.2339
     delay = Mslope*speed+MIntercept
     return delay
 
 
 def MotorGainAndOffset():
-    G = np.diag([0.855,0.7337])
-    V = np.mat([[-1.8889],[-0.6113]])
+    G = np.diag([0.38486314, 0.39270133])
+    V = np.mat([[-1.254864],[0.383282]])
     return G,V
