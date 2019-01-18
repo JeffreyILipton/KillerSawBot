@@ -115,6 +115,7 @@ class KillerRobotCmd(object):
         else:
             message = message + '\n'
             self.port.write(message.encode('ascii'))
+        print("Sending", message)
 
 def main():
     cmd = KillerRobotCmd("/dev/serial/by-id/usb-FTDI_FT231X_USB_UART_DN04ASN0-if00-port0")

@@ -40,7 +40,7 @@ class KillerRobotClient(object):
 
     def _poll_for_commands(self):
         input_bytes = self.port.readline()
-        input_string = input_bytes.decode('ascii').replace('\n', '').replace('\r', '')
+        input_string = input_bytes.decode('ascii').replace('\n', '')
         if not input_string:
             return
         input_values = input_string.split(",")
@@ -49,38 +49,38 @@ class KillerRobotClient(object):
 
     def _execute_command(self, input_values):
         command = input_values[0]
-        if command == KillerRobotProtocol.Start:
+        if command == int(KillerRobotProtocol.Start):
             print("Initialized")
             # don't know what to do here lol
-        elif command == KillerRobotProtocol.Stop:
+        elif command == int(KillerRobotProtocol.Stop):
             self.stop()
-        elif command == KillerRobotProtocol.LeftMotor:
+        elif command == int(KillerRobotProtocol.LeftMotor):
             jigsaw_robot.move_left_wheel(float(input_values[1]))
-        elif command == KillerRobotProtocol.RightMotor:
+        elif command == int(KillerRobotProtocol.RightMotor):
             jigsaw_robot.move_right_wheel(float(input_values[1]))
-        elif command == KillerRobotProtocol.LeftAndRightMotor:
+        elif command == int(KillerRobotProtocol.LeftAndRightMotor):
             jigsaw_robot.move_left_wheel(float(input_values[1]))
             jigsaw_robot.move_right_wheel(float(input_values[2]))
-        elif command == KillerRobotProtocol.Drill:
+        elif command == int(KillerRobotProtocol.Drill):
             jigsaw_robot.activate_drill(True)
             jigsaw_robot.lower_drill(1)
             time.sleep(30)
             jigsaw_robot.raise_drill(5)
             jigsaw_robot.activate_drill(False)
             time.sleep(10)
-        elif command == KillerRobotProtocol.JigsawLower:
+        elif command == int(KillerRobotProtocol.JigsawLower):
             jigsaw_robot.lower_jigsaw(5)
-        elif command == KillerRobotProtocol.JigsawRaise:
+        elif command == int(KillerRobotProtocol.JigsawRaise):
             jigsaw_robot.raise_jigsaw(5)
-        elif command == KillerRobotProtocol.JigsawLower:
+        elif command == int(KillerRobotProtocol.JigsawLower):
             jigsaw_robot.lower_jigsaw(5)
-        elif command == KillerRobotProtocol.JigsawStart:
+        elif command == int(KillerRobotProtocol.JigsawStart):
             jigsaw_robot.activate_jigsaw(True)
-        elif command == KillerRobotProtocol.JigsawStop:
+        elif command == int(KillerRobotProtocol.JigsawStop):
             jigsaw_robot.activate_jigsaw(False)
         else:
             jigsaw_robot.panic()
-            raise IOError("Unsupported command! Command was ", command)
+            raise IOError("Unsupported command! Command was " + str(command))
 
 def main():
     client = KillerRobotClient("/dev/ttyUSB0")
