@@ -105,9 +105,9 @@ class KillerRobotCmd(object):
 
     def _write_message(self, action, value1=None, value2=None):
         message = str(int(action))
-        if value1:
+        if value1 is not None:
             message = message + ',' + str(value1)
-            if value2:
+            if value2 is not None:
                 message = message + ',' + str(value2)
 
         if self.is_logging:
@@ -124,11 +124,6 @@ def main():
     time.sleep(1)
     cmd.drive(-500, -500)
     time.sleep(1)
-    cmd.drive(500, -500)
-    time.sleep(1)
-    cmd.drive(-500, 500)
-    time.sleep(1)
-    cmd.drive(0, 0)
     cmd.stop()
 
     return 0
