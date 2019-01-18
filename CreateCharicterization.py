@@ -24,7 +24,7 @@ class Charicterizer(Thread):
         self.CRC.start()
         self.offset = np.matrix([0,0,0]).transpose()
         self.t0 = 0
-        self.csvFile = open("run.csv",'wb')
+        self.csvFile = open("Run.csv",'wb')
         self.writer = csv.writer(self.csvFile)
         #row = [s[3],self.Xks[index],X,U]
         row=['Time','U_set','X','Y','Theta']

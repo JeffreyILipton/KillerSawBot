@@ -44,7 +44,7 @@ class KillerRobotClient(object):
         if not input_string:
             return
         input_values = input_string.split(",")
-        print("Command received! In bytes:", input_bytes, " | In string format:", input_string)
+        # print("Command received! In bytes:", input_bytes, " | In string format:", input_string)
         self._execute_command(input_values)
 
     def _execute_command(self, input_values):
