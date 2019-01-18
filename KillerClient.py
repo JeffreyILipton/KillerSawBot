@@ -48,7 +48,7 @@ class KillerRobotClient(object):
         self._execute_command(input_values)
 
     def _execute_command(self, input_values):
-        command = input_values[0]
+        command = int(input_values[0])
         if command == int(KillerRobotProtocol.Start):
             print("Initialized")
             # don't know what to do here lol
